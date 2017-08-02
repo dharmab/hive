@@ -1,5 +1,6 @@
 *.img
 *.vmdk
 .vagrant/
+ct.yml
 ignition.json
 ignition.json.merged

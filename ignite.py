@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-import json
 import sys
 import textwrap
+import yaml
 
 
 def unit(name, *, contents=None, enabled=True):
     unit = {
         'name': name,
-        'enabled': enabled,
+        'enable': enabled,
     }
     if contents:
         unit['contents'] = ''.join(textwrap.dedent(contents).strip())
@@ -32,9 +32,6 @@ docker_swarm_unit = unit(
 )
 
 ignition = {
-    'ignition': {
-        'version': '2.1.0',
-    },
     'systemd': {
         'units': [
             unit('docker.service', enabled=True),
@@ -44,4 +41,4 @@ ignition = {
 }
 
 
-sys.stdout.write(json.dumps(ignition))
+sys.stdout.write(yaml.dump(ignition))
