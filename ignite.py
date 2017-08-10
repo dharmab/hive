@@ -101,21 +101,45 @@ docker_swarm_dropin = dropin(
     """
 )
 
+swarm_unit = unit(
+    name='swarm-init.service',
+    enabled=True,
+    contents="""
+    [Unit]
+    Description=Create Docker Swarm services
+    Requires=docker.service
+    After=docker.service
+
+    [Service]
+    Type=oneshot
+    ExecStart=/opt/hive/bin/swarm
+    StandardOutput=journal
+
+    [Install]
+    WantedBy=multi-user.target
+    """
+)
+
 default_services = [
     swarm_service('nginx', image='nginx', ports=[
-        port(host=8080, container=80)
+        port(host_port=8080, container_port=80)
     ]),
 ]
+
+with open('swarm.sh') as f:
+    swarm_script = f.read()
 
 ignition = {
     'systemd': {
         'units': [
             unit('docker.service', enabled=True, dropins=[docker_swarm_dropin]),
+            swarm_unit
         ]
     },
     'storage': {
         'files': [
-            _file('/etc/swarm-services.json', mode=600, contents=json.dumps(default_services))
+            _file('/opt/hive/etc/swarm-services.json', mode=600, contents=json.dumps(default_services)),
+            _file('/opt/hive/bin/swarm', mode=700, contents=swarm_script)
         ]
     }
 }
