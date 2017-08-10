@@ -1,8 +1,6 @@
 #!/bin/bash
 
-swarm_service_conf='/opt/hive/etc/swarm-services.json'
-
-services=$(jq -r '. | map(.name)[]' "$swarm_service_conf")
+services="$(cat opt/hive/etc/swarm-services.json)"
 
 get_value() {
     object="$1"
@@ -11,15 +9,22 @@ get_value() {
     echo "$value"
 }
 
+get_array() {
+    object="$1"
+    key="$2"
+    array="$(echo "$object" | jq -r ". | map(.\"$key\")[]")"
+    echo "$array"
+}
+
 while ! docker service ls &> /dev/null; do
     echo "Waiting for swarm to initialize..."
     sleep 15
 done
 
-for service in $services; do
+for service in $(get_array "$services" "name"); do
     docker service remove "$service"
 
-    service_config=$(jq '.[] | select(.name = "'"$service"'")' "$swarm_service_conf")
+    service_config=$(echo "$services" | jq '.[] | select(.name = "'"$service"'")')
     image=$(get_value "$service_config" "image")
 
     docker service create \
