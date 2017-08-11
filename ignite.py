@@ -118,26 +118,37 @@ swarm_unit = unit(
     """
 )
 
-default_services = [
-    swarm_service(
-        'nginx',
-        image='nginx',
-        ports=[port(host_port=8080, container_port=80)]
-    ),
-    swarm_service(
-        'node-exporter',
-        image='quay.io/prometheus/node-exporter',
-        ports=[port(host_port=9100, container_port=9100)],
-        bind_mounts=[
-            bind_mount(host_path='/proc', container_path='/host/proc', read_only=True),
-            bind_mount(host_path='/sys', container_path='/host/sys', read_only=True),
-            bind_mount(host_path='/', container_path='/rootfs', read_only=True)
-        ]
+
+def load_service(service):
+    ports = []
+    for p in service.get('ports', []):
+        ports.append(port(
+            host_port=p['host'],
+            container_port=p['container'],
+            protocol=p.get('protocol', 'tcp')
+        ))
+
+    bind_mounts = []
+    for m in service.get('bind_mounts', []):
+        bind_mounts.append(bind_mount(
+            host_path=m['host'],
+            container_path=m['container'],
+            read_only=m.get('read_only', False)
+        ))
+
+    return swarm_service(
+        service['name'],
+        image=service['image'],
+        ports=ports,
+        bind_mounts=bind_mounts
     )
-]
+
 
 with open('swarm.sh') as f:
     swarm_script = f.read()
+
+with open('services.yml') as f:
+    services = [load_service(s) for s in yaml.load(f)]
 
 ignition = {
     'systemd': {
@@ -148,7 +159,7 @@ ignition = {
     },
     'storage': {
         'files': [
-            _file('/opt/hive/etc/swarm-services.json', mode=600, contents=json.dumps(default_services)),
+            _file('/opt/hive/etc/swarm-services.json', mode=600, contents=json.dumps(services)),
             _file('/opt/hive/bin/swarm', mode=700, contents=swarm_script)
         ]
     }
