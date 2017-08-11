@@ -16,7 +16,7 @@ This POC uses Docker Swarm to launch containers on a single-node Swarm "cluster"
 
 Copy `services.yml.example` to `services.yml` and edit it to define which services should run on the node.
 
-`services.yml` should be a list of service definition dictionaries. Each service definition dictionary contains the following key-value pairs, with *bold* keys being mandatory and all others being optional.
+`services.yml` should be a list of service definition dictionaries. Each service definition dictionary contains the following key-value pairs, with **bold** keys being mandatory and all others being optional.
 
 - **name**: Name of the Docker Swarm service this dictionary defines.
 - **image**: Docker image that the service will run.
