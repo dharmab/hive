@@ -63,7 +63,6 @@ def swarm_service(
     environment={},
     ports=[],
     bind_mounts={},
-    is_global=False,
     replicas=1
 ):
     return {
@@ -72,7 +71,6 @@ def swarm_service(
         'environment': environment,
         'ports': ports,
         'bind_mounts': bind_mounts,
-        'global': is_global,
         'replicas': replicas
     }
 

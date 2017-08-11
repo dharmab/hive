@@ -1,6 +1,6 @@
 #!/bin/bash
 
-services="$(cat opt/hive/etc/swarm-services.json)"
+services="$(cat /opt/hive/etc/swarm-services.json)"
 
 get_value() {
     object="$1"
@@ -29,5 +29,11 @@ for service in $(get_array "$services" "name"); do
 
     docker service create \
         --name "$service" \
+        $(
+            for ((i=0; i<$(echo "$service_config" | jq '.ports | length');i++)); do
+                port_config="$(echo "$service_config" | jq ".ports[$i]")"
+                echo -n " --publish mode=host,target=$(get_value "$port_config" "container"),published=$(get_value "$port_config" "host")"
+            done
+        ) \
         "$image"
 done;
