@@ -27,19 +27,24 @@ for service in $(get_array "$services" "name"); do
     service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
     image=$(get_value "$service_config" "image")
 
-    docker service create \
-        --name "$service" \
-        $(
-            for ((i=0; i<$(echo "$service_config" | jq '.bind_mounts | length');i++)); do
-                mount_config="$(echo "$service_config" | jq ".bind_mounts[$i]")"
-                echo -n " --mount type=bind,target=$(get_value "$mount_config" "container"),source=$(get_value "$mount_config" "host"),readonly=$(get_value "$mount_config" "read_only")"
-            done
-        ) \
-        $(
-            for ((i=0; i<$(echo "$service_config" | jq '.ports | length');i++)); do
-                port_config="$(echo "$service_config" | jq ".ports[$i]")"
-                echo -n " --publish mode=host,target=$(get_value "$port_config" "container"),published=$(get_value "$port_config" "host")"
-            done
-        ) \
-        "$image"
+    args=()
+    for var in $(echo "$service_config" | jq -r '.environment | keys[]'); do
+        value="$(get_value "$(get_value "$service_config" "environment")" "$var")"
+        args+=('--env' "$var=$value")
+    done
+    for ((i=0; i<$(echo "$service_config" | jq '.bind_mounts | length');i++)); do
+        mount_config="$(echo "$service_config" | jq ".bind_mounts[$i]")"
+        host_mount="$(get_value "$mount_config" "host")"
+        container_mount="$(get_value "$mount_config" "container")"
+        is_read_only="$(get_value "$mount_config" "read_only")"
+        args+=('--mount' "type=bind,target=$container_mount,source=$host_mount,readonly=$is_read_only")
+    done
+    for ((i=0; i<$(echo "$service_config" | jq '.ports | length');i++)); do
+        port_config="$(echo "$service_config" | jq ".ports[$i]")"
+        host_port="$(get_value "$port_config" "host")"
+        container_port="$(get_value "$port_config" "container")"
+        args+=('--publish' "mode=host,target=$container_port,published=$host_port")
+    done
+
+    docker service create --name "$service" "${args[@]}" "$image"
 done;

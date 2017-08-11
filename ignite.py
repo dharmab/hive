@@ -139,6 +139,7 @@ def load_service(service):
     return swarm_service(
         service['name'],
         image=service['image'],
+        environment=service.get('environment', {}),
         ports=ports,
         bind_mounts=bind_mounts
     )
