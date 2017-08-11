@@ -43,7 +43,8 @@ for service in $(get_array "$services" "name"); do
         port_config="$(echo "$service_config" | jq ".ports[$i]")"
         host_port="$(get_value "$port_config" "host")"
         container_port="$(get_value "$port_config" "container")"
-        args+=('--publish' "mode=host,target=$container_port,published=$host_port")
+        protocol="$(get_value "$port_config" "protocol")"
+        args+=('--publish' "mode=host,target=$container_port,published=$host_port,protocol=$protocol")
     done
 
     docker service create --name "$service" "${args[@]}" "$image"
