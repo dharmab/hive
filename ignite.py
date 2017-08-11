@@ -83,11 +83,11 @@ def port(*, host_port, container_port, protocol='tcp'):
     }
 
 
-def bind_mount(*, host_path, container_path, access='rw'):
+def bind_mount(*, host_path, container_path, read_only=False):
     return {
         'host': host_path,
         'container': container_path,
-        'access': access
+        'read_only': read_only
     }
 
 
@@ -119,9 +119,21 @@ swarm_unit = unit(
 )
 
 default_services = [
-    swarm_service('nginx', image='nginx', ports=[
-        port(host_port=8080, container_port=80)
-    ]),
+    swarm_service(
+        'nginx',
+        image='nginx',
+        ports=[port(host_port=8080, container_port=80)]
+    ),
+    swarm_service(
+        'node-exporter',
+        image='quay.io/prometheus/node-exporter',
+        ports=[port(host_port=9100, container_port=9100)],
+        bind_mounts=[
+            bind_mount(host_path='/proc', container_path='/host/proc', read_only=True),
+            bind_mount(host_path='/sys', container_path='/host/sys', read_only=True),
+            bind_mount(host_path='/', container_path='/rootfs', read_only=True)
+        ]
+    )
 ]
 
 with open('swarm.sh') as f:
