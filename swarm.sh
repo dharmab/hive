@@ -22,11 +22,15 @@ while ! docker service ls &> /dev/null; do
 done
 
 for service in $(get_array "$services" "name"); do
+    service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
     if docker service inspect "$service" &> /dev/null; then
         docker service remove "$service"
     fi
 
-    service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
+    if echo "$service_config" | jq -e '.is_enabled == false' &> /dev/null; then
+        continue
+    fi
+
     image=$(get_value "$service_config" "image")
 
     args=()

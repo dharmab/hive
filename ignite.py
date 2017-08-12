@@ -62,7 +62,8 @@ def swarm_service(
     environment={},
     ports=[],
     bind_mounts={},
-    command
+    command,
+    is_enabled=True
 ):
     service = {
         'name': name,
@@ -70,6 +71,7 @@ def swarm_service(
         'environment': environment,
         'ports': ports,
         'bind_mounts': bind_mounts,
+        'is_enabled': is_enabled
     }
 
     if command:
@@ -145,7 +147,8 @@ def load_service(service):
         environment=service.get('environment', {}),
         ports=ports,
         bind_mounts=bind_mounts,
-        command=service.get('command', None)
+        command=service.get('command', None),
+        is_enabled=service.get('is_enabled', True)
     )
 
 

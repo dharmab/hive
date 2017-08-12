@@ -21,6 +21,7 @@ Copy `config.yml.example` to `config.yml` and edit it to define which services s
 - services: List of definitions of services to run. Default: empty list.
   - **name**: Name of the Docker Swarm service this dictionary defines.
   - **image**: Docker image that the service will run.
+  - is_enabled: If False, the service will be removed and not recreated. Otherwise, the service will be created. This is useful to force a service to be removed if present. Default: False.
   - command: List containing command and arguments to run instead of the image's default. Example: `["ping", "-c", "5", "docker.com"]`
   - environment: Dictionary containing environment variables where each key is a variable name and each value is the variable's string value. Default: empty dictionary.
   - ports: List of host port bindings. Default: empty list.
