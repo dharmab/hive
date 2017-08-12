@@ -31,9 +31,14 @@ for service in $(get_array "$services" "name"); do
         continue
     fi
 
-    image=$(get_value "$service_config" "image")
-
     args=()
+
+    # Service name
+    args+=('--name' "$service")
+
+    # Don't wait for the service to start before creating the next one
+    args+=('--detach=true')
+
     # Environment variables
     for var in $(echo "$service_config" | jq -r '.environment | keys[]'); do
         value="$(get_value "$(get_value "$service_config" "environment")" "$var")"
@@ -57,12 +62,16 @@ for service in $(get_array "$services" "name"); do
         protocol="$(get_value "$port_config" "protocol")"
         args+=('--publish' "mode=host,target=$container_port,published=$host_port,protocol=$protocol")
     done
+    
+    # Image
+    image=$(get_value "$service_config" "image")
+    args+=("$image")
 
+    # Optional command override
     if echo "$service_config" | jq -e '.command[]' &> /dev/null; then
-        readarray -t cmd <<< "$(echo "$service_config" | jq -r '.command[]')"
-
-        docker service create --name "$service" --detach=true "${args[@]}" "$image" "${cmd[@]}"
-    else
-        docker service create --name "$service" --detach=true "${args[@]}" "$image"
+        readarray -t cmd <<< "$(get_array "$service_config" 'command')"
+        args+=("${cmd[@]}")
     fi
+
+    docker service create "${args[@]}"
 done;
