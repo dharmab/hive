@@ -1,0 +1,21 @@
+services:
+  - name: nginx
+    image: nginx
+    ports:
+      - container: 8080
+        host: 80
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter
+    ports:
+      - container: 9100
+        host: 9100
+    bind_mounts:
+      - container: /host/proc
+        host: /proc
+        read_only: True
+      - container: /host/sys
+        host: /sys
+        read_only: True
+      - container: /rootfs
+        host: /
+        read_only: True

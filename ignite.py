@@ -152,8 +152,9 @@ def load_service(service):
 with open('swarm.sh') as f:
     swarm_script = f.read()
 
-with open('services.yml') as f:
-    services = [load_service(s) for s in yaml.load(f)]
+with open('config.yml') as f:
+    config = yaml.load(f)
+services = [load_service(s) for s in config.get('services', [])]
 
 ignition = {
     'systemd': {

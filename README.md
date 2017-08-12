@@ -14,22 +14,23 @@ This POC uses Docker Swarm to launch containers on a single-node Swarm "cluster"
 
 # Configuration
 
-Copy `services.yml.example` to `services.yml` and edit it to define which services should run on the node.
+Copy `config.yml.example` to `config.yml` and edit it to define which services should run on the node.
 
-`services.yml` should be a list of service definition dictionaries. Each service definition dictionary contains the following key-value pairs, with **bold** keys being mandatory and all others being optional.
+`config.yml` may contain the following configuration, with **bold** configuration options being mandatory and all others being optional.
 
-- **name**: Name of the Docker Swarm service this dictionary defines.
-- **image**: Docker image that the service will run.
-- command: List containing command and arguments to run instead of the image's default. Example: `["ping", "-c", "5", "docker.com"]`
-- environment: Dictionary containing environment variables where each key is a variable name and each value is the variable's string value. Default: empty dictionary.
-- ports: List of host port bindings. Default: empty list.
-  - **container**: Port inside the container to bind.
-  - **host**: Port on the host to bind.
-  - protocol: 'tcp' or 'udp'. Default: 'tcp'
-- bind_mounts: List of bind mounts. Default: empty list.
-  - **container**: Path inside the container to bind.
-  - **host**: Path on the host to bind.
-  - read_only: If True, mount will be read-only. If False, mount will be read-write. Default: False
+- services: List of definitions of services to run. Default: empty list.
+  - **name**: Name of the Docker Swarm service this dictionary defines.
+  - **image**: Docker image that the service will run.
+  - command: List containing command and arguments to run instead of the image's default. Example: `["ping", "-c", "5", "docker.com"]`
+  - environment: Dictionary containing environment variables where each key is a variable name and each value is the variable's string value. Default: empty dictionary.
+  - ports: List of host port bindings. Default: empty list.
+    - **container**: Port inside the container to bind.
+    - **host**: Port on the host to bind.
+    - protocol: 'tcp' or 'udp'. Default: 'tcp'
+  - bind_mounts: List of bind mounts. Default: empty list.
+    - **container**: Path inside the container to bind.
+    - **host**: Path on the host to bind.
+    - read_only: If True, mount will be read-only. If False, mount will be read-write. Default: False
 
 # Try It
 
