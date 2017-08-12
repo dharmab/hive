@@ -22,7 +22,9 @@ while ! docker service ls &> /dev/null; do
 done
 
 for service in $(get_array "$services" "name"); do
-    docker service remove "$service"
+    if docker service inspect "$service" &> /dev/null; then
+        docker service remove "$service"
+    fi
 
     service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
     image=$(get_value "$service_config" "image")
