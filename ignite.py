@@ -59,20 +59,23 @@ def swarm_service(
     name,
     *,
     image,
-    tag='latest',
     environment={},
     ports=[],
     bind_mounts={},
-    replicas=1
+    command
 ):
-    return {
+    service = {
         'name': name,
-        'image': '{}:{}'.format(image, tag),
+        'image': image,
         'environment': environment,
         'ports': ports,
         'bind_mounts': bind_mounts,
-        'replicas': replicas
     }
+
+    if command:
+        service['command'] = command
+
+    return service
 
 
 def port(*, host_port, container_port, protocol='tcp'):
@@ -141,7 +144,8 @@ def load_service(service):
         image=service['image'],
         environment=service.get('environment', {}),
         ports=ports,
-        bind_mounts=bind_mounts
+        bind_mounts=bind_mounts,
+        command=service.get('command', None)
     )
 
 

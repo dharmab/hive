@@ -28,10 +28,13 @@ for service in $(get_array "$services" "name"); do
     image=$(get_value "$service_config" "image")
 
     args=()
+    # Environment variables
     for var in $(echo "$service_config" | jq -r '.environment | keys[]'); do
         value="$(get_value "$(get_value "$service_config" "environment")" "$var")"
         args+=('--env' "$var=$value")
     done
+
+    # Bind mounts
     for ((i=0; i<$(echo "$service_config" | jq '.bind_mounts | length');i++)); do
         mount_config="$(echo "$service_config" | jq ".bind_mounts[$i]")"
         host_mount="$(get_value "$mount_config" "host")"
@@ -39,6 +42,8 @@ for service in $(get_array "$services" "name"); do
         is_read_only="$(get_value "$mount_config" "read_only")"
         args+=('--mount' "type=bind,target=$container_mount,source=$host_mount,readonly=$is_read_only")
     done
+
+    # Published ports
     for ((i=0; i<$(echo "$service_config" | jq '.ports | length');i++)); do
         port_config="$(echo "$service_config" | jq ".ports[$i]")"
         host_port="$(get_value "$port_config" "host")"
@@ -47,5 +52,11 @@ for service in $(get_array "$services" "name"); do
         args+=('--publish' "mode=host,target=$container_port,published=$host_port,protocol=$protocol")
     done
 
-    docker service create --name "$service" "${args[@]}" "$image"
+    if echo "$service_config" | jq -e '.command[]' &> /dev/null; then
+        readarray -t cmd <<< "$(echo "$service_config" | jq -r '.command[]')"
+
+        docker service create --name "$service" "${args[@]}" "$image" "${cmd[@]}"
+    else
+        docker service create --name "$service" "${args[@]}" "$image"
+    fi
 done;

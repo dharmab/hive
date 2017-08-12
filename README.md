@@ -20,6 +20,7 @@ Copy `services.yml.example` to `services.yml` and edit it to define which servic
 
 - **name**: Name of the Docker Swarm service this dictionary defines.
 - **image**: Docker image that the service will run.
+- command: List containing command and arguments to run instead of the image's default. Example: `["ping", "-c", "5", "docker.com"]`
 - environment: Dictionary containing environment variables where each key is a variable name and each value is the variable's string value. Default: empty dictionary.
 - ports: List of host port bindings. Default: empty list.
   - **container**: Port inside the container to bind.
