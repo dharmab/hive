@@ -57,8 +57,8 @@ for service in $(get_array "$services" "name"); do
     if echo "$service_config" | jq -e '.command[]' &> /dev/null; then
         readarray -t cmd <<< "$(echo "$service_config" | jq -r '.command[]')"
 
-        docker service create --name "$service" "${args[@]}" "$image" "${cmd[@]}"
+        docker service create --name "$service" --detach=true "${args[@]}" "$image" "${cmd[@]}"
     else
-        docker service create --name "$service" "${args[@]}" "$image"
+        docker service create --name "$service" --detach=true "${args[@]}" "$image"
     fi
 done;
