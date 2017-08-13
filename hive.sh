@@ -1,6 +1,6 @@
 #!/bin/bash
 
-config_file=/opt/hive/etc/swarm-services.json
+config_file=/opt/hive/etc/services.json
 services="$(cat "$config_file")"
 
 get_value() {

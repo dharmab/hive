@@ -104,18 +104,18 @@ docker_swarm_dropin = dropin(
     """
 )
 
-swarm_unit = unit(
-    name='swarm-init.service',
+hive_unit = unit(
+    name='hive.service',
     enabled=True,
     contents="""
     [Unit]
-    Description=Create Docker Swarm services
+    Description=Create and manage Docker Swarm services
     Requires=docker.service
     After=docker.service
 
     [Service]
     Type=oneshot
-    ExecStart=/opt/hive/bin/swarm
+    ExecStart=/opt/hive/bin/hive
     StandardOutput=journal+console
 
     [Install]
@@ -152,8 +152,8 @@ def load_service(service):
     )
 
 
-with open('swarm.sh') as f:
-    swarm_script = f.read()
+with open('hive.sh') as f:
+    hive_script = f.read()
 
 with open('config.yml') as f:
     config = yaml.load(f)
@@ -163,13 +163,13 @@ ignition = {
     'systemd': {
         'units': [
             unit('docker.service', enabled=True, dropins=[docker_swarm_dropin]),
-            swarm_unit
+            hive_unit
         ]
     },
     'storage': {
         'files': [
-            _file('/opt/hive/etc/swarm-services.json', mode=600, contents=json.dumps(services)),
-            _file('/opt/hive/bin/swarm', mode=700, contents=swarm_script)
+            _file('/opt/hive/etc/services.json', mode=600, contents=json.dumps(services)),
+            _file('/opt/hive/bin/hive', mode=700, contents=hive_script)
         ]
     }
 }
