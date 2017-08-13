@@ -25,8 +25,7 @@ def unit(name, *, contents=None, enabled=True, dropins=None):
         'name': name,
         'enable': enabled,
     }
-    if contents:
-        unit['contents'] = cleanup_contents(contents)
+    if contents: unit['contents'] = cleanup_contents(contents)
     if dropins:
         unit['dropins'] = dropins
     return unit
@@ -52,47 +51,6 @@ def _file(path, *, contents='', mode=644):
             'inline': contents
         },
         'mode': mode
-    }
-
-
-def swarm_service(
-    name,
-    *,
-    image,
-    environment={},
-    ports=[],
-    bind_mounts={},
-    command,
-    is_enabled=True
-):
-    service = {
-        'name': name,
-        'image': image,
-        'environment': environment,
-        'ports': ports,
-        'bind_mounts': bind_mounts,
-        'is_enabled': is_enabled
-    }
-
-    if command:
-        service['command'] = command
-
-    return service
-
-
-def port(*, host_port, container_port, protocol='tcp'):
-    return {
-        'host': host_port,
-        'container': container_port,
-        'protocol': protocol
-    }
-
-
-def bind_mount(*, host_path, container_path, read_only=False):
-    return {
-        'host': host_path,
-        'container': container_path,
-        'read_only': read_only
     }
 
 
@@ -124,32 +82,37 @@ hive_unit = unit(
 )
 
 
-def load_service(service):
+def load_service(config):
     ports = []
-    for p in service.get('ports', []):
-        ports.append(port(
-            host_port=p['host'],
-            container_port=p['container'],
-            protocol=p.get('protocol', 'tcp')
-        ))
+    for port in config.get('ports', []):
+        ports.append({
+            "host": port['host'],
+            "container": port['container'],
+            "protocol": port.get('protocol', 'tcp')
+        })
 
     bind_mounts = []
-    for m in service.get('bind_mounts', []):
-        bind_mounts.append(bind_mount(
-            host_path=m['host'],
-            container_path=m['container'],
-            read_only=m.get('read_only', False)
-        ))
+    for mount in config.get('bind_mounts', []):
+        bind_mounts.append({
+            "host": mount['host'],
+            "container": mount['container'],
+            "read_only": mount.get('read_only', False)
+        })
+    
+    service = {
+        'name': config['name'],
+        'image': config['image'],
+        'environment': config.get('environment', {}),
+        'ports': ports,
+        'bind_mounts': bind_mounts,
+        'is_enabled': config.get('is_enabled', True)
+    }
 
-    return swarm_service(
-        service['name'],
-        image=service['image'],
-        environment=service.get('environment', {}),
-        ports=ports,
-        bind_mounts=bind_mounts,
-        command=service.get('command', None),
-        is_enabled=service.get('is_enabled', True)
-    )
+    command = config.get('command', None)
+    if command:
+        service['command'] = command
+
+    return service
 
 
 with open('hive.sh') as f:
