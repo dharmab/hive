@@ -116,7 +116,7 @@ swarm_unit = unit(
     [Service]
     Type=oneshot
     ExecStart=/opt/hive/bin/swarm
-    StandardOutput=journal
+    StandardOutput=journal+console
 
     [Install]
     WantedBy=multi-user.target

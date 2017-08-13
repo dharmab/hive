@@ -1,6 +1,7 @@
 #!/bin/bash
 
-services="$(cat /opt/hive/etc/swarm-services.json)"
+config_file=/opt/hive/etc/swarm-services.json
+services="$(cat "$config_file")"
 
 get_value() {
     object="$1"
@@ -9,11 +10,9 @@ get_value() {
     echo "$value"
 }
 
-get_array() {
-    object="$1"
-    key="$2"
-    array="$(echo "$object" | jq -r ". | map(.\"$key\")[]")"
-    echo "$array"
+hash_json() {
+    json="$1"
+    echo "$json" | jq '.' -c | sha512sum | cut -d ' ' -f 1
 }
 
 while ! docker service ls &> /dev/null; do
@@ -21,9 +20,30 @@ while ! docker service ls &> /dev/null; do
     sleep 15
 done
 
-for service in $(get_array "$services" "name"); do
+echo -n "Validating $config_file..."
+if ! echo "$services" | jq -e '.' > /dev/null; then
+    exit 1
+fi
+echo " Success!"
+
+echo "Creating config cache directory..."
+config_cache_dir="/opt/hive/var/configcache"
+mkdir -p "$config_cache_dir"
+
+for service in $(echo "$services" | jq -r 'map(.name)[]'); do
     service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
+    config_hash_file="$config_cache_dir/$service"
+
+    # Check if configuration has changed
+    if [[ -f "$config_hash_file" ]]; then
+        if [[ "$new_service_hash" == "$previous_service_hash" ]]; then
+            echo "Configuration of service '$service' in $config_file has not changed"
+            continue
+        fi
+    fi
+
     if docker service inspect "$service" &> /dev/null; then
+        echo "Stopping $service"
         docker service remove "$service"
     fi
 
@@ -69,9 +89,12 @@ for service in $(get_array "$services" "name"); do
 
     # Optional command override
     if echo "$service_config" | jq -e '.command[]' &> /dev/null; then
-        readarray -t cmd <<< "$(get_array "$service_config" 'command')"
+        readarray -t cmd <<< "$(get_value "$service_config" '.command[]')"
         args+=("${cmd[@]}")
     fi
 
+    echo "Starting $service"
     docker service create "${args[@]}"
+
+    echo "$new_service_hash" > "$config_hash_file"
 done;
