@@ -55,11 +55,14 @@ def _file(path, *, contents='', mode=644):
 
 
 def load_service(config):
+    if not re.match("[a-z0-9-]+", config["name"]):
+        raise ValueError("'{}' is not a valid service name".format(config["name"]))
+
     ports = []
     for port in config.get('ports', []):
         ports.append({
-            "host": port['host'],
-            "container": port['container'],
+            "host": int(port['host']),
+            "container": int(port['container']),
             "protocol": port.get('protocol', 'tcp')
         })
 
@@ -77,7 +80,7 @@ def load_service(config):
         'environment': config.get('environment', {}),
         'ports': ports,
         'bind_mounts': bind_mounts,
-        'is_enabled': config.get('is_enabled', True)
+        'is_enabled': bool(config.get('is_enabled', True))
     }
 
     command = config.get('command', None)

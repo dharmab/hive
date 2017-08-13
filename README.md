@@ -4,7 +4,7 @@ A very tiny container manager.
 
 This was written to POC a solution for running containers on Mesos masters. Mesos only supports running workloads on agents, but it can be useful to run containerized services on master nodes as well (e.g. monitoring and log aggregation agents).
 
-This POC uses Docker Swarm to launch containers on a single-node Swarm "cluster". It intentionally only supports a small subset of Swarm's capabilities to keep things simple.
+This POC uses Docker Swarm or systemd to manage containerized services. It intentionally only supports a small subset of Docker's capabilities to keep things simple.
 
 # Dependencies:
 
@@ -18,9 +18,9 @@ Copy `config.yml.example` to `config.yml` and edit it to define which services s
 
 `config.yml` may contain the following configuration, with **bold** configuration options being mandatory and all others being optional.
 
-- orchestrator: What software to use to manage the services. Only 'swarm' is supported for now. Default: 'swarm'
+- orchestrator: What software to use to manage the services. Either 'systemd' or 'swarm'. Default: 'swarm'
 - services: List of definitions of services to run. Default: empty list.
-  - **name**: Name of the Docker Swarm service this dictionary defines.
+  - **name**: Name of the Docker Swarm service this dictionary defines. Must consist of lowercase letters, numbers and '-' only.
   - **image**: Docker image that the service will run.
   - is_enabled: If False, the service will be removed and not recreated. Otherwise, the service will be created. This is useful to force a service to be removed if present. Default: False.
   - command: List containing command and arguments to run instead of the image's default. Example: `["ping", "-c", "5", "docker.com"]`

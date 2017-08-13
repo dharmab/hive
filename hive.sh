@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 config_file=/opt/hive/etc/services.json
 services="$(cat "$config_file")"
 orchestrator="$1"
@@ -9,7 +7,7 @@ orchestrator="$1"
 get_value() {
     local object="$1"
     local key="$2"
-    local value="$(echo "$object" | jq -er ".\"$key\"")"
+    local value="$(echo "$object" | jq -er ".$key")"
     echo "$value"
 }
 
@@ -19,6 +17,8 @@ hash_json() {
 }
 
 manage_swarm_service() {
+    local service_config="$1"
+
     local args=()
 
     # Service name
@@ -51,7 +51,7 @@ manage_swarm_service() {
         local protocol="$(get_value "$port_config" "protocol")"
         args+=('--publish' "mode=host,target=$container_port,published=$host_port,protocol=$protocol")
     done
-    
+
     # Image
     local image=$(get_value "$service_config" "image")
     args+=("$image")
@@ -72,6 +72,83 @@ manage_swarm_service() {
     if echo "$service_config" | jq -e '.is_enabled == true' &> /dev/null; then
         echo "Starting $service"
         docker service create "${args[@]}"
+    fi
+}
+
+manage_systemd_service() {
+    local service_config="$1"
+
+    args=("--rm")
+
+    # Service name
+    local name="hive-$(get_value "$service_config" "name")"
+    args+=("--name" "$name")
+
+    # Bind mounts
+    for ((i=0; i<$(echo "$service_config" | jq -e '.bind_mounts | length');i++)); do
+        local mount_config="$(echo "$service_config" | jq -e ".bind_mounts[$i]")"
+        local host_mount="$(get_value "$mount_config" "host")"
+        local container_mount="$(get_value "$mount_config" "container")"
+        local is_read_only="$(get_value "$mount_config" "read_only")"
+        args+=("--mount" "type=bind,target=$container_mount,source=$host_mount,readonly=$is_read_only")
+    done
+
+    # Published ports
+    for ((i=0; i<$(echo "$service_config" | jq -e '.ports | length');i++)); do
+        local port_config="$(echo "$service_config" | jq -e ".ports[$i]")"
+        local host_port="$(get_value "$port_config" "host")"
+        local container_port="$(get_value "$port_config" "container")"
+        local protocol="$(get_value "$port_config" "protocol")"
+        args+=("-p" "$container_port:$host_port/$protocol")
+    done
+
+    # Image
+    local image=$(get_value "$service_config" "image")
+    args+=("$image")
+
+    # Optional command override
+    if echo "$service_config" | jq -e '.command[]' &> /dev/null; then
+        readarray -t cmd <<< "$(get_value "$service_config" '.command[]')"
+        args+=("${cmd[@]}")
+    fi
+
+    unit+="[Unit]\n"
+    unit+="Description=$name\n"
+    unit+="After=docker.service\n"
+    unit+="Requires=docker.service\n"
+    unit+="\n"
+    unit+="[Service]\n"
+    unit+="ExecStartPre=-/usr/bin/docker kill $name\n"
+    unit+="ExecStartPre=-/usr/bin/docker rm $name\n"
+    unit+="ExecStartPre=/usr/bin/docker pull $image\n"
+    unit+="ExecStart=/usr/bin/docker run ${args[@]}\n"
+    unit+="\n"
+    unit+="[Install]\n"
+    unit+="WantedBy=multi-user.target\n"
+
+    # Environment variables
+    environment="[Service]\n"
+    for var in $(echo "$service_config" | jq -er '.environment | keys[]'); do
+        value="$(get_value "$(get_value "$service_config" "environment")" "$var")"
+        environment+="Environment=\"$var=$value\"\n"
+    done
+    
+    # Stop old instance (if running)
+    if systemctl is-active --quiet "$name"; then
+        echo "Stopping $service"
+        systemctl disable "$name" --now
+    fi
+
+    # Write service and environment variables
+    echo -e "$unit" > "/etc/systemd/system/$name.service"
+    mkdir -p "/etc/systemd/system/$name.service.d"
+    echo -e "$environment" > "/etc/systemd/system/$name.service.d/override.conf"
+    systemctl daemon-reload
+
+    # Start new instance (if enabled)
+    if echo "$service_config" | jq -e '.is_enabled == true' &> /dev/null; then
+        echo "Starting $service"
+        systemctl enable "$name" --now
     fi
 }
 
@@ -105,7 +182,9 @@ main() {
             fi
         fi
 
-        if [[ "$orchestrator" == "swarm" ]]; then
+        if [[ "$orchestrator" == "systemd" ]]; then
+            manage_systemd_service "$service_config"
+        else
             manage_swarm_service "$service_config"
         fi
 
