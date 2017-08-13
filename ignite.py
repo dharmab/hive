@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import re
 import sys
 import textwrap
 import yaml
@@ -119,7 +120,7 @@ docker_swarm_dropin = dropin(
     'docker-swarm.conf',
     contents="""
     [Service]
-    ExecStartPost=/usr/bin/docker swarm init
+    ExecStartPost=-/usr/bin/docker swarm init
     """
 )
 
