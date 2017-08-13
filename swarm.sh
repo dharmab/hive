@@ -42,15 +42,6 @@ for service in $(echo "$services" | jq -r 'map(.name)[]'); do
         fi
     fi
 
-    if docker service inspect "$service" &> /dev/null; then
-        echo "Stopping $service"
-        docker service remove "$service"
-    fi
-
-    if echo "$service_config" | jq -e '.is_enabled == false' &> /dev/null; then
-        continue
-    fi
-
     args=()
 
     # Service name
@@ -93,8 +84,18 @@ for service in $(echo "$services" | jq -r 'map(.name)[]'); do
         args+=("${cmd[@]}")
     fi
 
-    echo "Starting $service"
-    docker service create "${args[@]}"
+    # Stop old instance (if running)
+    if docker service inspect "$service" &> /dev/null; then
+        echo "Stopping $service"
+        docker service remove "$service"
+    fi
 
+    # Start new instance (if enabled)
+    if echo "$service_config" | jq -e '.is_enabled == true' &> /dev/null; then
+        echo "Starting $service"
+        docker service create "${args[@]}"
+    fi
+
+    # Save hash of current config for later config change checks
     echo "$new_service_hash" > "$config_hash_file"
 done;
