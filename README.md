@@ -18,6 +18,7 @@ Copy `config.yml.example` to `config.yml` and edit it to define which services s
 
 `config.yml` may contain the following configuration, with **bold** configuration options being mandatory and all others being optional.
 
+- orchestrator: What software to use to manage the services. Only 'swarm' is supported for now. Default: 'swarm'
 - services: List of definitions of services to run. Default: empty list.
   - **name**: Name of the Docker Swarm service this dictionary defines.
   - **image**: Docker image that the service will run.

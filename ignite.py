@@ -54,34 +54,6 @@ def _file(path, *, contents='', mode=644):
     }
 
 
-docker_swarm_dropin = dropin(
-    'docker-swarm.conf',
-    contents="""
-    [Service]
-    ExecStartPost=/usr/bin/docker swarm init
-    """
-)
-
-hive_unit = unit(
-    name='hive.service',
-    enabled=True,
-    contents="""
-    [Unit]
-    Description=Create and manage Docker Swarm services
-    Requires=docker.service
-    After=docker.service
-
-    [Service]
-    Type=oneshot
-    ExecStart=/opt/hive/bin/hive
-    StandardOutput=journal+console
-
-    [Install]
-    WantedBy=multi-user.target
-    """
-)
-
-
 def load_service(config):
     ports = []
     for port in config.get('ports', []):
@@ -98,7 +70,7 @@ def load_service(config):
             "container": mount['container'],
             "read_only": mount.get('read_only', False)
         })
-    
+
     service = {
         'name': config['name'],
         'image': config['image'],
@@ -121,6 +93,33 @@ with open('hive.sh') as f:
 with open('config.yml') as f:
     config = yaml.load(f)
 services = [load_service(s) for s in config.get('services', [])]
+hive_unit = unit(
+    name='hive.service',
+    enabled=True,
+    contents="""
+    [Unit]
+    Description=Create and manage Docker Swarm services
+    Requires=docker.service
+    After=docker.service
+
+    [Service]
+    Type=oneshot
+    ExecStart=/opt/hive/bin/hive {}
+    StandardOutput=journal+console
+
+    [Install]
+    WantedBy=multi-user.target
+    """.format(config.get('orchestrator', 'swarm'))
+)
+
+docker_swarm_dropin = dropin(
+    'docker-swarm.conf',
+    contents="""
+    [Service]
+    ExecStartPost=/usr/bin/docker swarm init
+    """
+)
+
 
 ignition = {
     'systemd': {
