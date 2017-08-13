@@ -26,9 +26,11 @@ if ! echo "$services" | jq -e '.' > /dev/null; then
 fi
 echo " Success!"
 
-echo "Creating config cache directory..."
 config_cache_dir="/opt/hive/var/configcache"
-mkdir -p "$config_cache_dir"
+if ! [[ -d "$config_cache_dir" ]]; then
+    echo "Creating config cache directory..."
+    mkdir -p "$config_cache_dir"
+fi
 
 for service in $(echo "$services" | jq -r 'map(.name)[]'); do
     service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
