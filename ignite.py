@@ -26,7 +26,8 @@ def unit(name, *, contents=None, enabled=True, dropins=None):
         'name': name,
         'enable': enabled,
     }
-    if contents: unit['contents'] = cleanup_contents(contents)
+    if contents:
+        unit['contents'] = cleanup_contents(contents)
     if dropins:
         unit['dropins'] = dropins
     return unit

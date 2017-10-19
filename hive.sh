@@ -7,7 +7,8 @@ orchestrator="$1"
 get_value() {
     local object="$1"
     local key="$2"
-    local value="$(echo "$object" | jq -er ".$key")"
+    local value
+    value="$(echo "$object" | jq -er ".$key")"
     echo "$value"
 }
 
@@ -22,7 +23,8 @@ manage_swarm_service() {
     local args=()
 
     # Service name
-    local name="$(get_value "$service_config" "name")"
+    local name
+    name="$(get_value "$service_config" "name")"
     args+=('--name' "$name")
 
     # Don't wait for the service to start before creating the next one
@@ -35,25 +37,34 @@ manage_swarm_service() {
     done
 
     # Bind mounts
+    local mount_config
+    local host_mount
+    local container_mount
+    local is_read_only
     for ((i=0; i<$(echo "$service_config" | jq -e '.bind_mounts | length');i++)); do
-        local mount_config="$(echo "$service_config" | jq -e ".bind_mounts[$i]")"
-        local host_mount="$(get_value "$mount_config" "host")"
-        local container_mount="$(get_value "$mount_config" "container")"
-        local is_read_only="$(get_value "$mount_config" "read_only")"
+        mount_config="$(echo "$service_config" | jq -e ".bind_mounts[$i]")"
+        host_mount="$(get_value "$mount_config" "host")"
+        container_mount="$(get_value "$mount_config" "container")"
+        is_read_only="$(get_value "$mount_config" "read_only")"
         args+=('--mount' "type=bind,target=$container_mount,source=$host_mount,readonly=$is_read_only")
     done
 
     # Published ports
+    local port_config
+    local host_port
+    local container_port
+    local protocol
     for ((i=0; i<$(echo "$service_config" | jq -e '.ports | length');i++)); do
-        local port_config="$(echo "$service_config" | jq -e ".ports[$i]")"
-        local host_port="$(get_value "$port_config" "host")"
-        local container_port="$(get_value "$port_config" "container")"
-        local protocol="$(get_value "$port_config" "protocol")"
+        port_config="$(echo "$service_config" | jq -e ".ports[$i]")"
+        host_port="$(get_value "$port_config" "host")"
+        container_port="$(get_value "$port_config" "container")"
+        protocol="$(get_value "$port_config" "protocol")"
         args+=('--publish' "mode=host,target=$container_port,published=$host_port,protocol=$protocol")
     done
 
     # Image
-    local image=$(get_value "$service_config" "image")
+    local image
+    image=$(get_value "$service_config" "image")
     args+=("$image")
 
     # Optional command override
@@ -81,29 +92,39 @@ manage_systemd_service() {
     args=("--rm")
 
     # Service name
-    local name="hive-$(get_value "$service_config" "name")"
+    local name
+    name="hive-$(get_value "$service_config" "name")"
     args+=("--name" "$name")
 
     # Bind mounts
+    local mount_config
+    local host_mount
+    local container_mount
+    local is_read_only
     for ((i=0; i<$(echo "$service_config" | jq -e '.bind_mounts | length');i++)); do
-        local mount_config="$(echo "$service_config" | jq -e ".bind_mounts[$i]")"
-        local host_mount="$(get_value "$mount_config" "host")"
-        local container_mount="$(get_value "$mount_config" "container")"
-        local is_read_only="$(get_value "$mount_config" "read_only")"
+        mount_config="$(echo "$service_config" | jq -e ".bind_mounts[$i]")"
+        host_mount="$(get_value "$mount_config" "host")"
+        container_mount="$(get_value "$mount_config" "container")"
+        is_read_only="$(get_value "$mount_config" "read_only")"
         args+=("--mount" "type=bind,target=$container_mount,source=$host_mount,readonly=$is_read_only")
     done
 
     # Published ports
+    local port_config
+    local host_port
+    local container_port
+    local protocol
     for ((i=0; i<$(echo "$service_config" | jq -e '.ports | length');i++)); do
-        local port_config="$(echo "$service_config" | jq -e ".ports[$i]")"
-        local host_port="$(get_value "$port_config" "host")"
-        local container_port="$(get_value "$port_config" "container")"
-        local protocol="$(get_value "$port_config" "protocol")"
+        port_config="$(echo "$service_config" | jq -e ".ports[$i]")"
+        host_port="$(get_value "$port_config" "host")"
+        container_port="$(get_value "$port_config" "container")"
+        protocol="$(get_value "$port_config" "protocol")"
         args+=("-p" "$container_port:$host_port/$protocol")
     done
 
     # Image
-    local image=$(get_value "$service_config" "image")
+    local image
+    image=$(get_value "$service_config" "image")
     args+=("$image")
 
     # Optional command override
@@ -132,7 +153,7 @@ manage_systemd_service() {
         value="$(get_value "$(get_value "$service_config" "environment")" "$var")"
         environment+="Environment=\"$var=$value\"\n"
     done
-    
+
     # Stop old instance (if running)
     if systemctl is-active --quiet "$name"; then
         echo "Stopping $service"
@@ -170,13 +191,17 @@ main() {
         mkdir -p "$config_cache_dir"
     fi
 
+    local service_config
+    local config_hash_file
+    local new_service_hash
     for service in $(echo "$services" | jq -er 'map(.name)[]'); do
-        local service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
-        local config_hash_file="$config_cache_dir/$service"
+        service_config=$(echo "$services" | jq '.[] | select(.name == "'"$service"'")')
+        config_hash_file="$config_cache_dir/$service"
 
         # Check if configuration has changed
+        new_service_hash="$(hash_json "$service_config")"
         if [[ -f "$config_hash_file" ]]; then
-            if [[ "$(hash_json "$service_config")" == "$(cat "$config_hash_file")" ]]; then
+            if [[ "$new_service_hash" == "$(cat "$config_hash_file")" ]]; then
                 echo "Configuration of service '$service' in $config_file has not changed"
                 continue
             fi
